@@ -1,26 +1,40 @@
 import types
+from functools import wraps
 
-
-def sentencify(name:str) -> str:
+def humanify(name:str) -> str:
     import re
     return ' '.join(re.split('_+', name))
 
 
 def step(fn):
+    @wraps(fn)
     def fn_with_logging(*args, **kwargs) :
-        fn_name = sentencify(fn.__name__)
-        is_method = (
+       is_method = (
             args
             and isinstance(args[0], object)
             and isinstance(getattr(args[0], fn.__name__), types.MethodType)
         )
-        args_to_log = args[1:] if is_method else args
-        print(
-            (f'[{args[0].__class__.__name__}] ' if is_method else '')
-            + fn_name
-            + ((': ' + ', '.join(map(str, args_to_log))) if args else '')
+
+       args_to_log = args[1:] if is_method else args
+       args_and_kwargs_to_log_as_strings = [
+            *map(str, args_to_log),
+            *[f'{key}={value}' for key, value in kwargs.items()]
+        ]
+       args_and_kwargs_strings = (
+            (': ' + ', '.join(map(str, args_and_kwargs_to_log_as_strings)))
+            if args_and_kwargs_to_log_as_strings
+            else ''
         )
-        return fn(*args, **kwargs)
+
+       print(
+            (f'[{args[0].__class__.__name__}] ' if is_method else '')
+            + humanify(fn.__name__)
+            + args_and_kwargs_strings
+        )
+
+       return fn(*args, **kwargs)
+
+    # fn_with_logging.__name__ = fn.__name__
 
     return fn_with_logging
 
@@ -37,12 +51,17 @@ def given_sign_uo_form_opened():
 given_sign_uo_form_opened = step(given_sign_uo_form_opened)      
 '''
 
-@step
+@step('Open registration form')
 def given__sign_uo_form_opened():
-    pass
+    # print(given__sign_uo_form_opened.__name__)
+    ...
 
 
 class SignUpForm:
+    @step
+    def fill_name(self, first_name, last_name):
+        pass
+
     @step
     def fill_email(self, value):
         pass
@@ -66,6 +85,7 @@ dashboard = DashBoard()
 
 
 given__sign_uo_form_opened()
+sign_up_form.fill_name('dima', last_name='ponomarev')
 sign_up_form.fill_email(value='test@mail.com')
 sign_up_form.fill_password('qwerty')
 sign_up_form.submit()
